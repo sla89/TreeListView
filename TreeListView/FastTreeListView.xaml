@@ -1,0 +1,248 @@
+﻿<UserControl x:Class="TreeListViewApp.FastTreeListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             xmlns:controls="clr-namespace:TreeListViewApp"
+             d:DesignHeight="300" d:DesignWidth="300">
+    <UserControl.Resources>
+        <Style x:Key="ToggleButton.TreeExpander" TargetType="{x:Type ToggleButton}">
+            <Setter Property="Margin" Value="{Binding Level, RelativeSource={RelativeSource AncestorType={x:Type controls:TreeListViewItem}}, Converter={x:Static controls:LevelToIndentConverter.Default}}"/>
+            <Setter Property="IsChecked" Value="{Binding Path=IsExpanded, RelativeSource={RelativeSource AncestorType= {x:Type controls:TreeListViewItem}}}"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <Border Padding="{TemplateBinding Padding}">
+                            <Grid Background="Transparent" SnapsToDevicePixels="False">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid x:Name="ArrowGrid" Grid.Column="0" Width="20">
+                                    <ContentControl x:Name="Up_Arrow" VerticalAlignment="Center" HorizontalAlignment="Center" Focusable="False">
+                                        <TextBlock Text="-"/>
+                                    </ContentControl>
+                                    <ContentControl x:Name="Down_Arrow" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed" Focusable="False">
+                                        <TextBlock Text="+" />
+                                    </ContentControl>
+                                </Grid>
+
+                                <ContentPresenter Grid.Column="1" HorizontalAlignment="Stretch" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Path=HasItems,RelativeSource={RelativeSource AncestorType={x:Type controls:TreeListViewItem}}}" Value="False">
+                                <Setter TargetName="ArrowGrid" Property="Visibility" Value="Hidden"/>
+                                <Setter Property="IsHitTestVisible" Value="False"/>
+                            </DataTrigger>
+                            <Trigger Property="IsChecked" Value="true">
+                                <Setter TargetName="Down_Arrow" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="Up_Arrow" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TreeListViewScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid Background="{TemplateBinding Background}" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Margin="{TemplateBinding Padding}">
+                                <ScrollViewer DockPanel.Dock="Top" Focusable="false"
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+
+                                    <GridViewHeaderRowPresenter Columns="{Binding Path=TemplatedParent.Columns, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        ColumnHeaderContainerStyle="{Binding Path=TemplatedParent.ColumnHeaderContainerStyle, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        ColumnHeaderTemplate="{Binding Path=TemplatedParent.ColumnHeaderTemplate, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        ColumnHeaderTemplateSelector="{Binding Path=TemplatedParent.ColumnHeaderTemplateSelector, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        AllowsColumnReorder="{Binding Path=TemplatedParent.AllowsColumnReorder, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        ColumnHeaderContextMenu="{Binding Path=TemplatedParent.ColumnHeaderContextMenu, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        ColumnHeaderToolTip="{Binding Path=TemplatedParent.ColumnHeaderToolTip, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </ScrollViewer>
+
+                                <ScrollContentPresenter Name="PART_ScrollContentPresenter"
+                                                KeyboardNavigation.DirectionalNavigation="Local"
+                                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                CanHorizontallyScroll="False"
+                                                CanVerticallyScroll="False" />
+                            </DockPanel>
+
+
+                            <ScrollBar Name="PART_HorizontalScrollBar"
+                                Orientation="Horizontal"
+                                BorderThickness="0,1,0,0"
+                                Grid.Row="1" Grid.Column="0"
+                                Maximum="{TemplateBinding ScrollableWidth}"
+                                ViewportSize="{TemplateBinding ViewportWidth}"
+                                Value="{TemplateBinding HorizontalOffset}"
+                                Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" />
+
+                            <ScrollBar Name="PART_VerticalScrollBar"
+                                Grid.Column="1" Grid.Row="0"
+                                BorderThickness="1,0,0,0"
+                                Maximum="{TemplateBinding ScrollableHeight}"
+                                ViewportSize="{TemplateBinding ViewportHeight}"
+                                Value="{TemplateBinding VerticalOffset}"
+                                Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TreeListView.Base" TargetType="{x:Type controls:TreeListView}" >
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Item" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel/>
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}">
+                            <ScrollViewer Style="{StaticResource TreeListViewScrollViewerStyle}">
+                                <ItemsPresenter x:Name="ItemsPresenter"/>
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TreeListViewItem.Base" TargetType="{x:Type controls:TreeListViewItem}" >
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type controls:TreeListViewItem}">
+                        <VirtualizingStackPanel>
+                            <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                                <!--<GridViewRowPresenter x:Name="PART_Header" Content="{TemplateBinding Header}" Columns="{Binding Columns, RelativeSource={RelativeSource FindAncestor, AncestorType=controls:TreeListView}}" />-->
+                                <ContentPresenter Content="{Binding}">
+                                    <ContentPresenter.Resources>
+                                        <DataTemplate DataType="{x:Type controls:Person}">
+                                            <TextBlock Text="{Binding FirstName}"/>
+                                        </DataTemplate>
+
+                                        <DataTemplate DataType="{x:Type controls:Contact}">
+                                            <TextBlock Text="{Binding FirstName}"/>
+                                        </DataTemplate>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" />
+                        </VirtualizingStackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="false">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="Blue" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <!--<MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="HasHeader" Value="false"/>
+                                    <Condition Property="Width" Value="Auto"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="PART_Header" Property="MinWidth" Value="75"/>
+                            </MultiTrigger>-->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True"/>
+                                    <Condition Property="IsSelectionActive" Value="false"/>
+                                </MultiTrigger.Conditions>
+                                <Setter Property="Background" Value="Gray"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style BasedOn="{StaticResource TreeListView.Base}" TargetType="{x:Type controls:TreeListView}" />
+        <Style BasedOn="{StaticResource TreeListViewItem.Base}" TargetType="{x:Type controls:TreeListViewItem}" />
+    </UserControl.Resources>
+
+    <controls:TreeListView HorizontalAlignment="Stretch" ItemsSource="{Binding}" >
+        <controls:TreeListView.ItemTemplate>
+            <HierarchicalDataTemplate  ItemsSource="{Binding Contacts}" />
+        </controls:TreeListView.ItemTemplate>
+        <controls:TreeListView.Columns>
+            <GridViewColumn Header="First Name" Width="100">
+                <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                        <DataTemplate.Resources>
+
+                            <DataTemplate DataType="{x:Type controls:Person}">
+                                <TextBlock Text="{Binding FirstName}"/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="{x:Type controls:Contact}">
+                                <TextBlock Text="{Binding FirstName}"/>
+                            </DataTemplate>
+                        </DataTemplate.Resources>
+
+                        <ToggleButton Content="{Binding}" Style="{StaticResource ToggleButton.TreeExpander}"/>
+
+                    </DataTemplate>
+                </GridViewColumn.CellTemplate>
+            </GridViewColumn>
+
+            <GridViewColumn Header="Last Name" Width="300">
+                <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                        <DataTemplate.Resources>
+                            <DataTemplate DataType="{x:Type controls:Person}">
+                                <TextBlock Text="{Binding LastName}"/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="{x:Type controls:Contact}">
+                                <TextBlock Text="{Binding LastName}"/>
+                            </DataTemplate>
+                        </DataTemplate.Resources>
+
+                        <ContentPresenter Content="{Binding}" VerticalAlignment="Center"/>
+                    </DataTemplate>
+                </GridViewColumn.CellTemplate>
+            </GridViewColumn>
+        </controls:TreeListView.Columns>
+    </controls:TreeListView>
+</UserControl>
